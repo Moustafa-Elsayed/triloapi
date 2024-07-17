@@ -1,18 +1,10 @@
-// See https://github.com/typicode/json-server#module
 const jsonServer = require('json-server')
+const fs = require('fs')
+const path = require('path')
 
 const server = jsonServer.create()
-
-// Uncomment to allow write operations
-// const fs = require('fs')
-// const path = require('path')
-// const filePath = path.join('db.json')
-// const data = fs.readFileSync(filePath, "utf-8");
-// const db = JSON.parse(data);
-// const router = jsonServer.router(db)
-
-// Comment out to allow write operations
-const router = jsonServer.router('db.json')
+const filePath = path.join('db.json')
+const router = jsonServer.router(filePath)
 
 const middlewares = jsonServer.defaults()
 
@@ -22,6 +14,22 @@ server.use(jsonServer.rewriter({
     '/api/*': '/$1',
     '/blog/:resource/:id/show': '/:resource/:id'
 }))
+
+// Middleware to handle POST requests to /users
+server.post('/users', (req, res) => {
+    const db = JSON.parse(fs.readFileSync(filePath, "utf-8"))
+    const users = db.users
+    const newUser = {
+        id: users.length ? users[users.length - 1].id + 1 : 1,
+        email: req.body.email,
+        password: req.body.password
+    }
+    users.push(newUser)
+    db.users = users
+    fs.writeFileSync(filePath, JSON.stringify(db, null, 2))
+    res.status(201).json(newUser)
+})
+
 server.use(router)
 server.listen(3000, () => {
     console.log('JSON Server is running')
